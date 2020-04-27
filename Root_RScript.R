@@ -24,24 +24,15 @@ dat <- left_join(root_data, metadata, by = c("plant_id" = "Random.ID"))
 View(dat)
 
 
-### changing years in numerical values 0 and 1 
-### pre = 0 ----- peak = 1
+### binning collection years into pre-drought (2010, 2011) and peak-drought (2014-16)
 
 dat <- dat%>%
-  mutate(pre_peak = ifelse(Year == "2010", "0", ifelse(Year == "2011", "0", ifelse(Year == "2014", "1", ifelse(Year == "2015", "1", ifelse(Year == "2016", "1", NA))))))
+  mutate(pre_peak = ifelse(Year == "2010", "pre", ifelse(Year == "2011", "pre", ifelse(Year == "2014", "peak", ifelse(Year == "2015", "peak", ifelse(Year == "2016", "peak", NA))))))
 
 
-
-#### changing treatments into 0 and 1 
-#### wet = 0  ---- dry = 1
-
+### making region variable from sites 
 dat <- dat%>%
-  mutate(num_treatment = ifelse(Treatment == "wet", "0", ifelse(Treatment == "dry", "1", NA)))
-
-
-### Changing sites to 1-5 (numerical values)
-
-
+  mutate(region = ifelse(Site == "S02", "South", ifelse(Site == "S07", "South", ifelse(Site == "S11", "South", ifelse(Site == "S15", "North", ifelse(Site == "S16", "North", ifelse(Site == "S36", "North", NA)))))))
 
 
 ### Histogram displaying raw data
@@ -64,34 +55,75 @@ p1 <- dat %>% filter(is.na(Name) == FALSE) %>%
 p1 + theme_classic()
 
 
-### Total Root length X Treatment 
-p2 <- dat %>% filter(is.na(Treatment) == FALSE) %>% 
-  ggplot(aes(x=Treatment, y=total_root_length)) +
-  geom_boxplot() + xlab("Treatment") + ylab("Total Root Length")
+### Total Root length X region
+p2 <- dat %>% filter(is.na(region) == FALSE) %>% 
+  ggplot(aes(x=region, y=total_root_length)) +
+  geom_boxplot() + xlab("Region") + ylab("Total Root Length")
 
 p2 + theme_classic()
 
-
-### Does root length by year - pre vs peak drought 
-p3 <- dat %>% filter(is.na(pre_peak) == FALSE) %>% 
-  ggplot(aes(x=pre_peak, y=total_root_length)) +
-  geom_boxplot() + xlab("Pre-drought                                                   Peak-drought") + ylab("Total Root Length")
+### Total Root length X Treatment 
+p3 <- dat %>% filter(is.na(Treatment) == FALSE) %>% 
+  ggplot(aes(x=Treatment, y=total_root_length)) +
+  geom_boxplot() + xlab("Treatment") + ylab("Total Root Length")
 
 p3 + theme_classic()
 
+### Does root length by year - pre vs peak drought 
+p4 <- dat %>% filter(is.na(pre_peak) == FALSE) %>% 
+  ggplot(aes(x=pre_peak, y=total_root_length)) +
+  geom_boxplot() + xlab("Year of collection") + ylab("Total Root Length")
+
+p4 + theme_classic()
 
 
-### Does root length differ by region?
+### Do regions differ in response to drought (evolution across years)?
+p5 <- dat %>% filter(is.na(pre_peak) == FALSE) %>% 
+  ggplot(aes(x=pre_peak, y=total_root_length, color=region)) +
+  geom_boxplot() + xlab("Year of collection") + ylab("Total Root Length")
+
+p5 + theme_classic()
+
+### Do regions differ in response to drought (plasticity across treatment)?
+p6 <- dat %>% filter(is.na(Treatment) == FALSE) %>% 
+  ggplot(aes(x=Treatment, y=total_root_length, color=region)) +
+  geom_boxplot() + xlab("Watering treatment") + ylab("Total Root Length")
+
+p6 + theme_classic()
+
+### Do sites differ in response to drought (plasticity across treatment)?
+p7 <- dat %>% filter(is.na(Treatment) == FALSE) %>% 
+  ggplot(aes(x=Site, y=total_root_length, color=Treatment)) +
+  geom_boxplot() + xlab("Site") + ylab("Total Root Length")
+
+p7 + theme_classic()
+
+### Did plasticity evolve?
+p8 <- dat %>% filter(is.na(Treatment) == FALSE) %>% 
+  ggplot(aes(x=pre_peak, y=total_root_length, color=Treatment)) +
+  geom_boxplot() + xlab("Year of collection") + ylab("Total Root Length")
+
+p8 + theme_classic()
 
 
-### Total Root Length X Year of Collection
+#### Analysis of variance
+library(lme4)
+library(lmerTest)
+library(lmtest)
 
+mod.3way <- lmer(total_root_length ~ region*Treatment*pre_peak + (1|Site), data=dat)
+summary(mod.3way)
+# model gives singularity error - it is overly complex
+# two options: drop random effect &/or drop interaction terms
 
+# without random effect of site
+mod.3way.fixed <- lm(total_root_length ~ region*Treatment*pre_peak, data=dat)
+summary(mod.3way.fixed)
 
+# retaining random effect but dropping interaction terms
+mod.2ways <- lmer(total_root_length ~ region*Treatment + region*pre_peak + Treatment*pre_peak + (1|Site), data=dat)
+summary(mod.2ways)
 
-
-
-
-
+lrtest(mod.3way, mod.2ways) #  3-way model has significantly higher likelihood --> should retain 3-way interaction
 
 
