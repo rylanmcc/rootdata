@@ -32,8 +32,11 @@ dat <- dat%>%
 
 ### making region variable from sites 
 dat <- dat%>%
-  mutate(region = ifelse(Site == "S02", "South", ifelse(Site == "S07", "South", ifelse(Site == "S11", "South", ifelse(Site == "S15", "North", ifelse(Site == "S16", "North", ifelse(Site == "S36", "North", NA)))))))
+  mutate(Region = ifelse(Site == "S02", "South", ifelse(Site == "S07", "South", ifelse(Site == "S11", "South", ifelse(Site == "S15", "North", ifelse(Site == "S16", "North", ifelse(Site == "S36", "North", NA)))))))
 
+### export simplified file for Biol 300 demo
+dat_300 <- dat %>% select(Region, Treatment, total_root_length) %>% filter(is.na(Treatment) == FALSE) %>% filter(is.na(Region)==FALSE)
+write_csv(dat_300, "RootData_Biol300.csv")
 
 ### Histogram displaying raw data
 
